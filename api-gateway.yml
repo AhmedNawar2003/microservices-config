@@ -6,36 +6,65 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
+        # 1. User Service (Authentication & Registration)
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/users/**
-            
+            - Path=/api/users/**, /api/users/v3/api-docs/**
+
+        # 2. Product Service (Main API - Protected)
         - id: product-service
           uri: lb://product-service
           predicates:
             - Path=/api/products/**
           filters:
-            - AuthenticationFilter
-            
+            - name: AuthenticationFilter # الفلتر الأمني هنا فقط
+
+        # 3. Product Service (Documentation - Public)
+        - id: product-docs
+          uri: lb://product-service
+          predicates:
+            - Path=/api/products/v3/api-docs/**
+
+        # 4. Order Service (Main API - Protected)
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/api/orders/**
           filters:
-            - AuthenticationFilter
+            - name: AuthenticationFilter # الفلتر الأمني هنا فقط
 
+        # 5. Order Service (Documentation - Public)
+        - id: order-docs
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/v3/api-docs/**
+
+# إعدادات تجميع الـ Swagger في الجيت واي
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: User Service
+        url: /api/users/v3/api-docs
+      - name: Product Service
+        url: /api/products/v3/api-docs
+      - name: Order Service
+        url: /api/orders/v3/api-docs
+
+# إعدادات يوريكا (معدلة للعمل داخل Docker)
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka/
   instance:
     prefer-ip-address: true
 
+# إعدادات التتبع (Zipkin)
 management:
   tracing:
     sampling:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: http://localhost:9411/api/v2/spans
+      endpoint: http://zipkin:9411/api/v2/spans
